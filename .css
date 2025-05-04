@@ -1,0 +1,440 @@
+:root {
+  --primary: #003893; /* Azul bandera Colombia */
+  --secondary: #FCD116; /* Amarillo bandera */
+  --accent: #CE1126; /* Rojo bandera */
+  --text: #333333;
+  --light: #f8f9fa;
+  --gray: #6c757d;
+  --dark-gray: #343a40;
+  --success: #28a745;
+  --danger: #dc3545;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f5f5f5;
+  color: var(--text);
+  line-height: 1.6;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+header {
+  text-align: center;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: white;
+}
+
+.flag-banner {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.flag-color {
+  height: 8px;
+  width: 100px;
+}
+
+.yellow { background-color: var(--secondary); }
+.blue { background-color: var(--primary); }
+.red { background-color: var(--accent); }
+
+h1 {
+  margin-bottom: 10px;
+  font-size: 2.2rem;
+}
+
+.app-description {
+  max-width: 800px;
+  margin: 0 auto;
+  opacity: 0.9;
+}
+
+.app-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  padding: 30px;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Secciones comunes */
+.input-section, .output-section {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  color: var(--primary);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--light);
+  font-size: 1.5rem;
+}
+
+/* Sección de entrada */
+.input-methods {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--light);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tab-btn.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.tab-btn:hover:not(.active) {
+  background-color: #e9ecef;
+}
+
+.input-container {
+  margin-bottom: 20px;
+}
+
+textarea {
+  width: 100%;
+  height: 150px;
+  padding: 15px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  font-size: 16px;
+  transition: border 0.3s;
+}
+
+textarea:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 56, 147, 0.1);
+}
+
+.camera-container {
+  position: relative;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--dark-gray);
+}
+
+#camera-feed {
+  width: 100%;
+  display: block;
+}
+
+#processing-canvas {
+  display: none;
+}
+
+/* Botones */
+.btn-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--text);
+}
+
+.btn-success {
+  background-color: var(--success);
+  color: white;
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
+}
+
+.btn-sm {
+  padding: 8px 15px;
+  font-size: 0.9rem;
+}
+
+.btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sección de salida */
+.sign-display {
+  min-height: 300px;
+  border: 2px dashed #eee;
+  border-radius: 8px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 25px;
+  transition: border-color 0.3s;
+}
+
+.sign-display.active {
+  border-color: var(--secondary);
+}
+
+.sign-animation {
+  font-size: 100px;
+  margin-bottom: 20px;
+  transition: transform 0.3s;
+}
+
+.sign-animation:hover {
+  transform: scale(1.1);
+}
+
+.sign-text {
+  font-size: 1.8rem;
+  color: var(--primary);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.sign-description {
+  color: var(--gray);
+  font-size: 1rem;
+}
+
+/* Historial */
+.sign-history {
+  margin-top: 30px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.history-items {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 15px;
+}
+
+.history-item {
+  min-width: 80px;
+  height: 80px;
+  background-color: var(--light);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.history-item:hover {
+  background-color: var(--secondary);
+  transform: translateY(-3px);
+}
+
+.history-item .sign {
+  font-size: 30px;
+}
+
+.history-item .letter {
+  font-size: 0.8rem;
+  margin-top: 5px;
+  font-weight: 600;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.close-modal {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--gray);
+  transition: color 0.3s;
+}
+
+.close-modal:hover {
+  color: var(--danger);
+}
+
+.sign-detail {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.sign-detail .sign {
+  font-size: 80px;
+  margin-bottom: 20px;
+}
+
+.sign-detail h2 {
+  color: var(--primary);
+  margin-bottom: 15px;
+}
+
+.sign-detail p {
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.examples-list {
+  text-align: left;
+  margin-top: 20px;
+}
+
+.examples-list h3 {
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
+.examples-list ul {
+  list-style-type: none;
+}
+
+.examples-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* Animaciones */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.pulse {
+  animation: pulse 1.5s infinite;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #002b6f;
+}
