@@ -1,394 +1,724 @@
-// Base de datos de señas LSC
-const LSC_DATABASE = {
-  'hola': {
-    sign: '👋',
-    description: 'Saludo moviendo la mano de lado a lado a la altura del hombro',
-    examples: ['¡Hola! ¿Cómo estás?', 'Hola a todos']
-  },
-  'gracias': {
-    sign: '🤲',
-    description: 'Manos juntas moviéndose hacia adelante desde el pecho',
-    examples: ['Muchas gracias', 'Te agradezco mucho']
-  },
-  'colombia': {
-    sign: '🇨🇴',
-    description: 'Movimiento circular con la mano derecha mientras se señala con el índice',
-    examples: ['Soy de Colombia', 'Viva Colombia']
-  },
-  'si': {
-    sign: '👍',
-    description: 'Pulgar hacia arriba con movimiento de arriba hacia abajo',
-    examples: ['Sí, estoy de acuerdo', '¿Sí?']
-  },
-  'no': {
-    sign: '👎',
-    description: 'Pulgar hacia abajo con movimiento de lado a lado',
-    examples: ['No quiero', 'No, gracias']
-  },
-  'ayuda': {
-    sign: '🙏',
-    description: 'Manos juntas moviéndose hacia arriba y abajo',
-    examples: ['Necesito ayuda', '¿Me puedes ayudar?']
-  },
-  'amor': {
-    sign: '🤟',
-    description: 'Manos cruzadas sobre el pecho',
-    examples: ['Te amo', 'Con mucho amor']
-  },
-  'familia': {
-    sign: '👨‍👩‍👧‍👦',
-    description: 'Dibujar un círculo con ambas manos empezando desde los hombros',
-    examples: ['Mi familia', 'Familia unida']
-  },
-  'comida': {
-    sign: '🤲🍽️',
-    description: 'Manos simulando llevar comida a la boca',
-    examples: ['Quiero comida', '¿Qué hay de comer?']
-  },
-  'agua': {
-    sign: '✋💧',
-    description: 'Mano en forma de C moviéndose hacia la boca',
-    examples: ['Quiero agua', 'Agua por favor']
-  }
-};
-
-// Alfabeto manual LSC
-const LSC_ALPHABET = {
-  'a': '✋', 'b': '🤚', 'c': '🤏', 'd': '🤙', 'e': '🖖',
-  'f': '👌', 'g': '🤘', 'h': '✌️', 'i': '🤞', 'j': '🤟',
-  'k': '🤚', 'l': '👋', 'm': '🤲', 'n': '👐', 'o': '🙌',
-  'p': '👏', 'q': '👍', 'r': '👎', 's': '✊', 't': '👊',
-  'u': '🤛', 'v': '🤜', 'w': '🤝', 'x': '🙏', 'y': '👆',
-  'z': '👇', ' ': '␣', ',': '↩️', '.': '⏺️', '?': '❓',
-  '!': '❗', 'á': '✋', 'é': '🖖', 'í': '🤞', 'ó': '🙌', 'ú': '🤛',
-  '0': '0️⃣', '1': '1️⃣', '2': '2️⃣', '3': '3️⃣', '4': '4️⃣',
-  '5': '5️⃣', '6': '6️⃣', '7': '7️⃣', '8': '8️⃣', '9': '9️⃣'
-};
-
-// Elementos del DOM
-const DOM = {
-  textTab: document.getElementById('text-tab'),
-  cameraTab: document.getElementById('camera-tab'),
-  textInputContainer: document.getElementById('text-input-container'),
-  cameraInputContainer: document.getElementById('camera-input-container'),
-  inputText: document.getElementById('input-text'),
-  translateBtn: document.getElementById('translate-btn'),
-  clearTextBtn: document.getElementById('clear-text-btn'),
-  startCameraBtn: document.getElementById('start-camera-btn'),
-  stopCameraBtn: document.getElementById('stop-camera-btn'),
-  cameraFeed: document.getElementById('camera-feed'),
-  processingCanvas: document.getElementById('processing-canvas'),
-  signAnimation: document.getElementById('sign-animation'),
-  signText: document.getElementById('sign-text'),
-  signDescription: document.getElementById('sign-description'),
-  historyItems: document.getElementById('history-items'),
-  clearHistoryBtn: document.getElementById('clear-history-btn'),
-  modal: document.getElementById('sign-modal'),
-  closeModal: document.querySelector('.close-modal'),
-  modalSign: document.getElementById('modal-sign'),
-  modalTitle: document.getElementById('modal-title'),
-  modalDescription: document.getElementById('modal-description'),
-  modalExamples: document.getElementById('modal-examples')
-};
-
-// Estado de la aplicación
-const AppState = {
-  videoStream: null,
-  cameraInterval: null,
-  signHistory: JSON.parse(localStorage.getItem('signHistory')) || [],
-  currentAnimation: null,
-  activeTab: 'text'
-};
-
-// Inicialización de la aplicación
-function init() {
-  setupEventListeners();
-  renderHistory();
-  showWelcomeSign();
-}
-
-// Configurar event listeners
-function setupEventListeners() {
-  // Cambio de pestañas
-  DOM.textTab.addEventListener('click', () => switchTab('text'));
-  DOM.cameraTab.addEventListener('click', () => switchTab('camera'));
-  
-  // Botones de texto
-  DOM.translateBtn.addEventListener('click', handleTranslate);
-  DOM.clearTextBtn.addEventListener('click', () => {
-    DOM.inputText.value = '';
-    DOM.inputText.focus();
-  });
-  
-  // Botones de cámara
-  DOM.startCameraBtn.addEventListener('click', startCamera);
-  DOM.stopCameraBtn.addEventListener('click', stopCamera);
-  
-  // Historial
-  DOM.clearHistoryBtn.addEventListener('click', clearHistory);
-  
-  // Modal
-  DOM.closeModal.addEventListener('click', closeModal);
-  window.addEventListener('click', (e) => {
-    if (e.target === DOM.modal) closeModal();
-  });
-  
-  // Tecla Enter para traducción
-  DOM.inputText.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleTranslate();
-  });
-}
-
-// Cambiar entre pestañas
-function switchTab(tab) {
-  AppState.activeTab = tab;
-  
-  if (tab === 'text') {
-    DOM.textTab.classList.add('active');
-    DOM.cameraTab.classList.remove('active');
-    DOM.textInputContainer.style.display = 'block';
-    DOM.cameraInputContainer.style.display = 'none';
-    stopCamera();
-  } else {
-    DOM.cameraTab.classList.add('active');
-    DOM.textTab.classList.remove('active');
-    DOM.textInputContainer.style.display = 'none';
-    DOM.cameraInputContainer.style.display = 'block';
-  }
-}
-
-// Manejar traducción de texto
-function handleTranslate() {
-  const text = DOM.inputText.value.trim().toLowerCase();
-  
-  if (!text) {
-    showAlert('Por favor ingresa un texto para traducir');
-    return;
-  }
-  
-  translateTextToSign(text);
-}
-
-// Traducir texto a señas
-function translateTextToSign(text) {
-  // Limpiar animación previa
-  if (AppState.currentAnimation) {
-    clearInterval(AppState.currentAnimation);
-    AppState.currentAnimation = null;
-  }
-  
-  const words = text.split(' ');
-  const outputSigns = [];
-  const outputTexts = [];
-  const outputDescriptions = [];
-  
-  words.forEach(word => {
-    if (LSC_DATABASE[word]) {
-      // Palabra conocida
-      outputSigns.push(LSC_DATABASE[word].sign);
-      outputTexts.push(word);
-      outputDescriptions.push(LSC_DATABASE[word].description);
-      addToHistory(word, LSC_DATABASE[word].sign, 'word');
-    } else {
-      // Deletrear palabra
-      [...word].forEach(char => {
-        if (LSC_ALPHABET[char]) {
-          outputSigns.push(LSC_ALPHABET[char]);
-          outputTexts.push(char);
-          outputDescriptions.push(`Letra ${char.toUpperCase()} en LSC`);
-          addToHistory(char, LSC_ALPHABET[char], 'letter');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor 2D de LSC | Lenguaje de Señas Colombiano</title>
+    <style>
+        :root {
+            --primary: #003893; /* Azul bandera Colombia */
+            --secondary: #FCD116; /* Amarillo bandera */
+            --accent: #CE1126; /* Rojo bandera */
+            --text: #333333;
+            --light: #f8f9fa;
+            --gray: #6c757d;
         }
-      });
-    }
-  });
-  
-  // Mostrar resultados
-  if (outputSigns.length > 0) {
-    showSign(outputSigns[0], outputTexts[0], outputDescriptions[0]);
-    
-    // Animar si hay múltiples señas
-    if (outputSigns.length > 1) {
-      let currentIndex = 1;
-      AppState.currentAnimation = setInterval(() => {
-        showSign(outputSigns[currentIndex], outputTexts[currentIndex], outputDescriptions[currentIndex]);
-        currentIndex++;
-        
-        if (currentIndex >= outputSigns.length) {
-          clearInterval(AppState.currentAnimation);
-          AppState.currentAnimation = null;
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-      }, 1500);
-    }
-  }
-}
 
-// Mostrar una seña
-function showSign(sign, text, description) {
-  DOM.signAnimation.textContent = sign;
-  DOM.signText.textContent = text;
-  DOM.signDescription.textContent = description;
-  
-  // Efecto visual
-  DOM.signAnimation.classList.add('pulse');
-  setTimeout(() => {
-    DOM.signAnimation.classList.remove('pulse');
-  }, 500);
-}
+        body {
+            background-color: #f5f5f5;
+            color: var(--text);
+            line-height: 1.6;
+        }
 
-// Agregar al historial
-function addToHistory(text, sign, type) {
-  // Evitar duplicados consecutivos
-  const lastItem = AppState.signHistory[AppState.signHistory.length - 1];
-  if (lastItem && lastItem.text === text && lastItem.sign === sign) return;
-  
-  // Limitar historial a 20 items
-  if (AppState.signHistory.length >= 20) {
-    AppState.signHistory.shift();
-  }
-  
-  AppState.signHistory.push({ text, sign, type, timestamp: new Date() });
-  saveHistory();
-  renderHistory();
-}
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
-// Renderizar historial
-function renderHistory() {
-  DOM.historyItems.innerHTML = '';
-  
-  AppState.signHistory.forEach(item => {
-    const historyItem = document.createElement('div');
-    historyItem.className = 'history-item';
-    historyItem.innerHTML = `
-      <div class="sign">${item.sign}</div>
-      <div class="letter">${item.text}</div>
-    `;
-    
-    historyItem.addEventListener('click', () => showSignDetail(item));
-    DOM.historyItems.appendChild(historyItem);
-  });
-}
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--secondary);
+        }
 
-// Mostrar detalles de seña
-function showSignDetail(item) {
-  if (item.type === 'word') {
-    const signData = LSC_DATABASE[item.text];
-    DOM.modalSign.textContent = signData.sign;
-    DOM.modalTitle.textContent = item.text;
-    DOM.modalDescription.textContent = signData.description;
-    
-    let examplesHTML = '<h3>Ejemplos de uso:</h3><ul>';
-    signData.examples.forEach(example => {
-      examplesHTML += `<li>${example}</li>`;
-    });
-    examplesHTML += '</ul>';
-    DOM.modalExamples.innerHTML = examplesHTML;
-  } else {
-    DOM.modalSign.textContent = item.sign;
-    DOM.modalTitle.textContent = `Letra ${item.text.toUpperCase()}`;
-    DOM.modalDescription.textContent = `Seña correspondiente a la letra ${item.text.toUpperCase()} en el alfabeto manual LSC`;
-    DOM.modalExamples.innerHTML = '<h3>Uso:</h3><ul><li>Para deletrear palabras</li></ul>';
-  }
-  
-  DOM.modal.style.display = 'flex';
-}
+        .flag-banner {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
 
-// Cerrar modal
-function closeModal() {
-  DOM.modal.style.display = 'none';
-}
+        .flag-color {
+            height: 8px;
+            width: 80px;
+        }
 
-// Limpiar historial
-function clearHistory() {
-  AppState.signHistory = [];
-  saveHistory();
-  renderHistory();
-}
+        .yellow { background-color: var(--secondary); }
+        .blue { background-color: var(--primary); }
+        .red { background-color: var(--accent); }
 
-// Guardar historial en localStorage
-function saveHistory() {
-  localStorage.setItem('signHistory', JSON.stringify(AppState.signHistory));
-}
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
 
-// Mostrar seña de bienvenida
-function showWelcomeSign() {
-  const welcomeSigns = ['hola', 'bienvenido', 'colombia'];
-  const randomSign = welcomeSigns[Math.floor(Math.random() * welcomeSigns.length)];
-  
-  if (LSC_DATABASE[randomSign]) {
-    showSign(
-      LSC_DATABASE[randomSign].sign,
-      randomSign,
-      LSC_DATABASE[randomSign].description
-    );
-  }
-}
+        .app-description {
+            max-width: 800px;
+            margin: 0 auto 20px;
+            color: var(--gray);
+        }
 
-// Manejo de la cámara
-async function startCamera() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        width: { ideal: 1280 }, 
-        height: { ideal: 720 },
-        facingMode: 'user'
-      } 
-    });
-    
-    AppState.videoStream = stream;
-    DOM.cameraFeed.srcObject = stream;
-    
-    DOM.startCameraBtn.disabled = true;
-    DOM.stopCameraBtn.disabled = false;
-    
-    // Simular reconocimiento (en una app real usarías un modelo de IA)
-    AppState.cameraInterval = setInterval(simulateSignRecognition, 3000);
-    
-  } catch (err) {
-    console.error("Error al acceder a la cámara:", err);
-    showAlert("No se pudo acceder a la cámara. Por favor asegúrate de permitir el acceso.");
-  }
-}
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
 
-// Simular reconocimiento de señas
-function simulateSignRecognition() {
-  const signs = Object.keys(LSC_DATABASE);
-  const randomSign = signs[Math.floor(Math.random() * signs.length)];
-  
-  showSign(
-    LSC_DATABASE[randomSign].sign,
-    randomSign,
-    LSC_DATABASE[randomSign].description
-  );
-  
-  addToHistory(randomSign, LSC_DATABASE[randomSign].sign, 'word');
-}
+        .input-section, .output-section {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
 
-// Detener cámara
-function stopCamera() {
-  if (AppState.videoStream) {
-    AppState.videoStream.getTracks().forEach(track => track.stop());
-    AppState.videoStream = null;
-    DOM.cameraFeed.srcObject = null;
-  }
-  
-  if (AppState.cameraInterval) {
-    clearInterval(AppState.cameraInterval);
-    AppState.cameraInterval = null;
-  }
-  
-  DOM.startCameraBtn.disabled = false;
-  DOM.stopCameraBtn.disabled = true;
-}
+        h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
 
-// Mostrar alerta
-function showAlert(message) {
-  const alertDiv = document.createElement('div');
-  alertDiv.className = 'alert';
-  alertDiv.textContent = message;
-  
-  document.body.appendChild(alertDiv);
-  setTimeout(() => alertDiv.remove(), 3000);
-}
+        .input-methods {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
 
-// Iniciar la aplicación cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', init);
+        .input-methods button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--light);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .input-methods button.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .input-methods button:hover {
+            opacity: 0.9;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: var(--text);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .camera-container {
+            position: relative;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #camera-feed {
+            width: 100%;
+            background-color: #000;
+            display: block;
+        }
+
+        #processing-canvas {
+            display: none;
+        }
+
+        .sign-display {
+            min-height: 300px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sign-animation {
+            font-size: 100px;
+            margin-bottom: 20px;
+        }
+
+        .sign-text {
+            font-size: 24px;
+            text-align: center;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sign-description {
+            text-align: center;
+            color: var(--gray);
+            margin-top: 10px;
+        }
+
+        .sign-history {
+            margin-top: 30px;
+        }
+
+        .history-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-items {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .history-item {
+            min-width: 80px;
+            height: 80px;
+            background-color: var(--light);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .history-item:hover {
+            background-color: var(--secondary);
+        }
+
+        .history-item .sign {
+            font-size: 30px;
+        }
+
+        .history-item .letter {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Modal para detalles de seña */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .sign-detail {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .sign-detail .sign {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="flag-banner">
+                <div class="flag-color yellow"></div>
+                <div class="flag-color blue"></div>
+                <div class="flag-color red"></div>
+            </div>
+            <h1>Traductor 2D de Lenguaje de Señas Colombiano</h1>
+            <p class="app-description">
+                Traduce texto a señas del LSC y reconoce señas a través de tu cámara. 
+                Herramienta diseñada para facilitar la comunicación con la comunidad sorda colombiana.
+            </p>
+        </header>
+
+        <div class="app-container">
+            <div class="input-section">
+                <h2>Entrada</h2>
+                
+                <div class="input-methods">
+                    <button id="text-tab" class="active">Texto</button>
+                    <button id="camera-tab">Cámara</button>
+                </div>
+                
+                <div id="text-input-container">
+                    <textarea id="input-text" placeholder="Escribe el texto que deseas traducir a señas..."></textarea>
+                    <div class="buttons">
+                        <button id="translate-btn" class="btn btn-primary">Traducir</button>
+                        <button id="clear-text-btn" class="btn btn-secondary">Limpiar</button>
+                    </div>
+                </div>
+                
+                <div id="camera-input-container" style="display: none;">
+                    <div class="camera-container">
+                        <video id="camera-feed" width="560" height="315"></video>
+                        <canvas id="processing-canvas"></canvas>
+                    </div>
+                    <div class="buttons">
+                        <button id="start-camera-btn" class="btn btn-primary">Iniciar Cámara</button>
+                        <button id="stop-camera-btn" class="btn btn-secondary" disabled>Detener</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h2>Salida</h2>
+                
+                <div class="sign-display">
+                    <div class="sign-animation" id="sign-animation">🤚</div>
+                    <div class="sign-text" id="sign-text">Bienvenido al traductor de LSC</div>
+                    <div class="sign-description" id="sign-description">
+                        Aquí aparecerá la traducción del texto o el reconocimiento de señas
+                    </div>
+                </div>
+                
+                <div class="sign-history">
+                    <div class="history-title">
+                        <h3>Historial</h3>
+                        <button id="clear-history-btn" class="btn btn-secondary" style="padding: 5px 10px;">Limpiar</button>
+                    </div>
+                    <div class="history-items" id="history-items">
+                        <!-- Historial se llenará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para detalles de seña -->
+    <div class="modal" id="sign-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div class="sign-detail">
+                <div class="sign" id="modal-sign">👋</div>
+                <h2 id="modal-title">Hola</h2>
+                <p id="modal-description">Descripción detallada de la seña</p>
+                <div id="modal-examples">
+                    <h3>Ejemplos de uso:</h3>
+                    <p>Ejemplo 1: Hola, ¿cómo estás?</p>
+                    <p>Ejemplo 2: Hola a todos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Base de datos de señas LSC (ejemplo extendido)
+        const LSC_DATABASE = {
+            'hola': {
+                sign: '👋',
+                description: 'Mover la mano de lado a lado a la altura del hombro',
+                examples: ['Hola, ¿cómo estás?', 'Hola a todos']
+            },
+            'gracias': {
+                sign: '🤲',
+                description: 'Manos juntas moviéndose hacia adelante desde el pecho',
+                examples: ['Muchas gracias', 'Gracias por tu ayuda']
+            },
+            'colombia': {
+                sign: '🇨🇴',
+                description: 'Movimiento circular con la mano derecha mientras se señala con el índice',
+                examples: ['Soy de Colombia', 'Viva Colombia']
+            },
+            'si': {
+                sign: '👍',
+                description: 'Pulgar hacia arriba con movimiento de arriba hacia abajo',
+                examples: ['Sí, estoy de acuerdo', '¿Sí?']
+            },
+            'no': {
+                sign: '👎',
+                description: 'Pulgar hacia abajo con movimiento de lado a lado',
+                examples: ['No quiero', 'No, gracias']
+            },
+            'ayuda': {
+                sign: '🙏',
+                description: 'Manos juntas moviéndose hacia arriba y abajo',
+                examples: ['Necesito ayuda', '¿Me puedes ayudar?']
+            },
+            'amor': {
+                sign: '🤟',
+                description: 'Manos cruzadas sobre el pecho',
+                examples: ['Te amo', 'Con mucho amor']
+            },
+            'familia': {
+                sign: '👨‍👩‍👧‍👦',
+                description: 'Dibujar un círculo con ambas manos empezando desde los hombros',
+                examples: ['Mi familia', 'Familia unida']
+            },
+            // Podemos añadir más señas del LSC aquí
+        };
+
+        // Alfabeto manual LSC (ejemplo)
+        const LSC_ALPHABET = {
+            'a': '✋', 'b': '🤚', 'c': '🤏', 'd': '🤙', 'e': '🖖',
+            'f': '👌', 'g': '🤘', 'h': '✌️', 'i': '🤞', 'j': '🤟',
+            'k': '🤚', 'l': '👋', 'm': '🤲', 'n': '👐', 'o': '🙌',
+            'p': '👏', 'q': '👍', 'r': '👎', 's': '✊', 't': '👊',
+            'u': '🤛', 'v': '🤜', 'w': '🤝', 'x': '🙏', 'y': '👆',
+            'z': '👇', ' ': '␣', ',': '↩️', '.': '⏺️', '?': '❓',
+            '!': '❗', 'á': '✋', 'é': '🖖', 'í': '🤞', 'ó': '🙌', 'ú': '🤛'
+        };
+
+        // Elementos del DOM
+        const textTab = document.getElementById('text-tab');
+        const cameraTab = document.getElementById('camera-tab');
+        const textInputContainer = document.getElementById('text-input-container');
+        const cameraInputContainer = document.getElementById('camera-input-container');
+        const inputText = document.getElementById('input-text');
+        const translateBtn = document.getElementById('translate-btn');
+        const clearTextBtn = document.getElementById('clear-text-btn');
+        const startCameraBtn = document.getElementById('start-camera-btn');
+        const stopCameraBtn = document.getElementById('stop-camera-btn');
+        const signAnimation = document.getElementById('sign-animation');
+        const signText = document.getElementById('sign-text');
+        const signDescription = document.getElementById('sign-description');
+        const historyItems = document.getElementById('history-items');
+        const clearHistoryBtn = document.getElementById('clear-history-btn');
+        const modal = document.getElementById('sign-modal');
+        const closeModal = document.querySelector('.close-modal');
+        const modalSign = document.getElementById('modal-sign');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDescription = document.getElementById('modal-description');
+        const modalExamples = document.getElementById('modal-examples');
+
+        // Variables para el manejo de la cámara
+        let videoStream;
+        let cameraInterval;
+        let signHistory = JSON.parse(localStorage.getItem('signHistory')) || [];
+
+        // Cambiar entre pestañas de entrada
+        textTab.addEventListener('click', () => {
+            textTab.classList.add('active');
+            cameraTab.classList.remove('active');
+            textInputContainer.style.display = 'block';
+            cameraInputContainer.style.display = 'none';
+            stopCamera();
+        });
+
+        cameraTab.addEventListener('click', () => {
+            cameraTab.classList.add('active');
+            textTab.classList.remove('active');
+            textInputContainer.style.display = 'none';
+            cameraInputContainer.style.display = 'block';
+        });
+
+        // Traducir texto a señas
+        translateBtn.addEventListener('click', () => {
+            const text = inputText.value.trim().toLowerCase();
+            if (!text) {
+                alert('Por favor ingresa un texto para traducir');
+                return;
+            }
+            
+            translateTextToSign(text);
+        });
+
+        // Limpiar texto
+        clearTextBtn.addEventListener('click', () => {
+            inputText.value = '';
+        });
+
+        // Iniciar cámara
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('camera-feed');
+                video.srcObject = stream;
+                videoStream = stream;
+                
+                startCameraBtn.disabled = true;
+                stopCameraBtn.disabled = false;
+                
+                // Iniciar reconocimiento (simulado en este ejemplo)
+                cameraInterval = setInterval(() => {
+                    simulateSignRecognition();
+                }, 2000);
+                
+            } catch (err) {
+                console.error("Error al acceder a la cámara:", err);
+                alert("No se pudo acceder a la cámara. Por favor asegúrate de permitir el acceso.");
+            }
+        });
+
+        // Detener cámara
+        stopCameraBtn.addEventListener('click', stopCamera);
+
+        // Limpiar historial
+        clearHistoryBtn.addEventListener('click', () => {
+            signHistory = [];
+            localStorage.setItem('signHistory', JSON.stringify(signHistory));
+            renderHistory();
+        });
+
+        // Cerrar modal
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Cerrar modal al hacer clic fuera
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Función para traducir texto a señas
+        function translateTextToSign(text) {
+            // Primero buscar palabras completas en el diccionario
+            const words = text.split(' ');
+            let outputSigns = [];
+            let outputText = [];
+            let outputDescriptions = [];
+            
+            words.forEach(word => {
+                if (LSC_DATABASE[word]) {
+                    // Palabra conocida
+                    outputSigns.push(LSC_DATABASE[word].sign);
+                    outputText.push(word);
+                    outputDescriptions.push(LSC_DATABASE[word].description);
+                    
+                    // Agregar al historial
+                    addToHistory({
+                        sign: LSC_DATABASE[word].sign,
+                        text: word,
+                        type: 'word'
+                    });
+                } else {
+                    // Deletrear palabra
+                    const letters = word.split('');
+                    letters.forEach(letter => {
+                        if (LSC_ALPHABET[letter]) {
+                            outputSigns.push(LSC_ALPHABET[letter]);
+                            outputText.push(letter);
+                            outputDescriptions.push(`Letra ${letter.toUpperCase()} en LSC`);
+                            
+                            // Agregar al historial
+                            addToHistory({
+                                sign: LSC_ALPHABET[letter],
+                                text: letter,
+                                type: 'letter'
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Mostrar el primer resultado
+            if (outputSigns.length > 0) {
+                showSign(outputSigns[0], outputText[0], outputDescriptions[0]);
+                
+                // Si hay múltiples señas, animarlas
+                if (outputSigns.length > 1) {
+                    let currentIndex = 1;
+                    const signInterval = setInterval(() => {
+                        showSign(outputSigns[currentIndex], outputText[currentIndex], outputDescriptions[currentIndex]);
+                        currentIndex++;
+                        if (currentIndex >= outputSigns.length) {
+                            clearInterval(signInterval);
+                        }
+                    }, 1500);
+                }
+            }
+        }
+
+        // Función para mostrar una seña
+        function showSign(sign, text, description) {
+            signAnimation.textContent = sign;
+            signText.textContent = text;
+            signDescription.textContent = description;
+        }
+
+        // Función para simular reconocimiento de señas (en un sistema real usarías un modelo de IA)
+        function simulateSignRecognition() {
+            const signs = Object.keys(LSC_DATABASE);
+            const randomSign = signs[Math.floor(Math.random() * signs.length)];
+            
+            showSign(
+                LSC_DATABASE[randomSign].sign,
+                randomSign,
+                LSC_DATABASE[randomSign].description
+            );
+            
+            addToHistory({
+                sign: LSC_DATABASE[randomSign].sign,
+                text: randomSign,
+                type: 'word'
+            });
+        }
+
+        // Función para detener la cámara
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            
+            if (cameraInterval) {
+                clearInterval(cameraInterval);
+                cameraInterval = null;
+            }
+            
+            const video = document.getElementById('camera-feed');
+            video.srcObject = null;
+            
+            startCameraBtn.disabled = false;
+            stopCameraBtn.disabled = true;
+        }
+
+        // Función para agregar al historial
+        function addToHistory(item) {
+            // Limitar historial a 20 items
+            if (signHistory.length >= 20) {
+                signHistory.shift();
+            }
+            
+            signHistory.push(item);
+            localStorage.setItem('signHistory', JSON.stringify(signHistory));
+            renderHistory();
+        }
+
+        // Función para renderizar el historial
+        function renderHistory() {
+            historyItems.innerHTML = '';
+            
+            signHistory.forEach((item, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <div class="sign">${item.sign}</div>
+                    <div class="letter">${item.text}</div>
+                `;
+                
+                historyItem.addEventListener('click', () => {
+                    if (item.type === 'word') {
+                        showSignDetail(item.text);
+                    } else {
+                        showSignDetail(item.text, true);
+                    }
+                });
+                
+                historyItems.appendChild(historyItem);
+            });
+        }
+
+        // Función para mostrar detalles de una seña
+        function showSignDetail(text, isLetter = false) {
+            if (isLetter) {
+                modalSign.textContent = LSC_ALPHABET[text] || '❓';
+                modalTitle.textContent = `Letra ${text.toUpperCase()}`;
+                modalDescription.textContent = `Seña correspondiente a la letra ${text.toUpperCase()} en el alfabeto manual LSC`;
+                modalExamples.innerHTML = '<h3>Uso:</h3><p>Para deletrear palabras</p>';
+            } else {
+                const signData = LSC_DATABASE[text];
+                if (signData) {
+                    modalSign.textContent = signData.sign;
+                    modalTitle.textContent = text;
+                    modalDescription.textContent = signData.description;
+                    
+                    let examplesHTML = '<h3>Ejemplos de uso:</h3>';
+                    signData.examples.forEach(example => {
+                        examplesHTML += `<p>${example}</p>`;
+                    });
+                    modalExamples.innerHTML = examplesHTML;
+                }
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        // Inicializar la aplicación
+        function init() {
+            renderHistory();
+            
+            // Mostrar una seña de bienvenida al azar
+            const welcomeSigns = ['hola', 'bienvenido', 'colombia'];
+            const randomWelcome = welcomeSigns[Math.floor(Math.random() * welcomeSigns.length)];
+            
+            if (LSC_DATABASE[randomWelcome]) {
+                showSign(
+                    LSC_DATABASE[randomWelcome].sign,
+                    randomWelcome,
+                    LSC_DATABASE[randomWelcome].description
+                );
+            }
+        }
+
+        // Iniciar la aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
